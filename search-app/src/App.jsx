@@ -3,122 +3,170 @@ import { useState } from 'react';
 function App() {
   const [formData, setFormData] = useState({
     nome: '',
-    telefone: '',
-    comidaFavorita: '',
-    restauranteFavorito: '',
-    namora: false,
-    comentarios: ''
+    nivelEstresse: '5',
+    programaIdeal: '',
+    culinariaFavorita: '',
+    estadoCivil: null, // Alterado de 'namora' para 'estadoCivil' para ser mais formal
+    aceitaConvite: null, // Alterado de 'querSair'
+    whatsapp: ''
   });
+  
   const [message, setMessage] = useState({ text: '', type: '' });
   const [submissionCount, setSubmissionCount] = useState(0);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+    
     setFormData(prev => ({
       ...prev,
       [name]: value
     }));
 
-    if(name === 'namora'){
-      const perguntaNaoElement = document.getElementById('perguntaNao');
-      if(value === 'não'){
-        perguntaNaoElement.classList.remove('hidden');
+    // Lógica do Estado Civil
+    if (name === 'estadoCivil') {
+      const perguntaConvite = document.getElementById('perguntaConvite');
+      const whatsappSection = document.getElementById('whatsappSection');
+
+      if (value === 'solteira') {
+        perguntaConvite?.classList.remove('hidden');
+        whatsappSection?.classList.remove('hidden');
       } else {
-        perguntaNaoElement.classList.add('hidden');
+        perguntaConvite?.classList.add('hidden');
+        whatsappSection?.classList.add('hidden');
+        setFormData(prev => ({ ...prev, aceitaConvite: null })); 
+      }
+      
+      // Resetar posição do botão não
+      const naoElement = document.getElementById('nao');
+      if (naoElement) {
+        naoElement.style.position = '';
+        naoElement.style.left = '';
+        naoElement.style.top = '';
       }
     }
-
   };
 
+  function handleAceitaConviteChange(e) {
+    const { name, value } = e.target;
+    if (value === 'sim') {
+        setFormData(prev => ({ ...prev, [name]: value }));
+    }
+  }
+
   function handleChangeNao(e) {
-    e.preventDefault();
-
-    // mover o elemento com id "nao" aleatoriamente
-
+    e.preventDefault(); 
+    e.stopPropagation(); 
+    
     const naoElement = document.getElementById('nao');
-    if (naoElement) {
-      const perguntaNaoElement = document.getElementById('perguntaNao');
-      const maxX = perguntaNaoElement.clientWidth - naoElement.offsetWidth;
-      const maxY = perguntaNaoElement.clientHeight - naoElement.offsetHeight;
-      const randomX = Math.floor(Math.random() * maxX);
-      const randomY = Math.floor(Math.random() * maxY);
+    const container = document.getElementById('containerFugitivo');
+
+    if (naoElement && container) {
+      const parentWidth = container.offsetWidth;
+      const parentHeight = container.offsetHeight;
+      const childWidth = naoElement.offsetWidth;
+      const childHeight = naoElement.offsetHeight;
+
+      const maxX = parentWidth - childWidth;
+      const maxY = parentHeight - childHeight;
+      
+      const randomX = Math.max(0, Math.floor(Math.random() * maxX));
+      const randomY = Math.max(0, Math.floor(Math.random() * maxY));
+      
       naoElement.style.position = 'absolute';
+      naoElement.style.transition = 'all 0.1s ease';
       naoElement.style.left = `${randomX}px`;
       naoElement.style.top = `${randomY}px`;
-
-      perguntaNaoElement.classList.add('border');
-      perguntaNaoElement.classList.add('border-red-500');
-      perguntaNaoElement.classList.add('transition-all');
-      perguntaNaoElement.classList.add('duration-150');
     }
-    
-    
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (!formData.nome.trim() || !formData.email.trim()) {
-      setMessage({ text: 'Por favor, preencha os campos obrigatórios (Nome e Email)', type: 'error' });
+    // Validação básica
+    if (!formData.nome.trim()) {
+      setMessage({ text: 'Por favor, preencha seu nome.', type: 'error' });
       return;
     }
 
+    // Feedback visual de carregamento
+    setMessage({ text: 'Enviando respostas...', type: 'info' });
+
+    // ⚠️ SUBSTITUA PELA SUA URL DO GOOGLE APPS SCRIPT AQUI
+    const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxbzoGEpB5Y4ExcQ5AyRPNOjUf5V9ZcqVYz1XBJNK648eZj_84_ntBB_nWhnVW6NJJagQ/exec';
+
     try {
-      const response = await fetch('http://localhost:3001/save-form', {
+      const submissionData = {
+        ...formData,
+        timestamp: new Date().toLocaleString('pt-BR')
+      };
+
+      // Envio para o Google Sheets
+      await fetch(GOOGLE_SCRIPT_URL, {
         method: 'POST',
+        // 'no-cors' é essencial para o Google Apps Script não dar erro de bloqueio
+        mode: 'no-cors', 
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ 
-          ...formData,
-          timestamp: new Date().toISOString()
-        }),
+        body: JSON.stringify(submissionData)
       });
 
-      if (response.ok) {
-        setMessage({ text: 'Formulário enviado com sucesso!', type: 'success' });
-        setSubmissionCount(prev => prev + 1);
-        
-        // Limpar formulário
+      // Sucesso
+      setMessage({ text: 'Resposta registrada com sucesso! 😉', type: 'success' });
+      setSubmissionCount(prev => prev + 1);
+      
+      // Limpeza do formulário após 3 segundos
+      setTimeout(() => {
         setFormData({
-          nome: '',
-          telefone: '',
-          comidaFavorita: '',
-          restauranteFavorito: '',
-          namora: false,
-          satisfacao: '',
-          comentarios: ''
+            nome: '', 
+            nivelEstresse: '5', 
+            programaIdeal: '', 
+            culinariaFavorita: '',
+            estadoCivil: null, 
+            aceitaConvite: null, 
+            whatsapp: ''
         });
         
-        // Limpar mensagem após 3 segundos
-        setTimeout(() => setMessage({ text: '', type: '' }), 3000);
-      } else {
-        setMessage({ text: 'Erro ao enviar formulário', type: 'error' });
-      }
+        // Esconder os campos dinâmicos novamente
+        document.getElementById('perguntaConvite')?.classList.add('hidden');
+        document.getElementById('whatsappSection')?.classList.add('hidden');
+        
+        // Limpar mensagem
+        setMessage({ text: '', type: '' });
+      }, 3000);
+
     } catch (error) {
-      setMessage({ text: 'Erro ao conectar com o servidor', type: 'error' });
-      console.error('Erro:', error);
+      console.error('Erro ao enviar:', error);
+      setMessage({ text: 'Houve um erro ao enviar. Tente novamente.', type: 'error' });
     }
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center p-5 bg-purple-50">
-      <div className="w-full max-w-[770px] bg-white rounded-lg mb-3 overflow-hidden shadow-[0_1px_2px_0_rgba(60,64,67,0.3),0_1px_3px_1px_rgba(60,64,67,0.15)]">
-        <div className="h-2.5 bg-linear-to-r from-purple-700 via-purple-600 to-pink-600"></div>
-        <h1 className="text-[32px] font-normal text-gray-800 px-6 pt-6 pb-2 m-0">Formulário de Pesquisa</h1>
-        <p className="text-sm text-gray-600 px-6 pb-6 m-0">Preencha os campos abaixo com suas informações</p>
+    <div className="min-h-screen flex flex-col items-center p-4 bg-purple-50 font-sans">
+      
+      {/* Cabeçalho Limpo */}
+      <div className="w-full max-w-[770px] bg-white rounded-lg mb-3 overflow-hidden shadow-sm border border-gray-200">
+        <div className="h-2.5 bg-purple-700"></div>
+        <div className="p-6">
+          <h1 className="text-3xl font-normal text-gray-900 mb-2">Formulário de Interesses</h1>
+          <p className="text-sm text-gray-600">
+            Breve pesquisa para coleta de preferências pessoais.
+          </p>
+        </div>
       </div>
 
       <div className="w-full max-w-[770px] mx-auto">
-        <form onSubmit={handleSubmit} className="bg-white rounded-lg p-6 shadow-[0_1px_2px_0_rgba(60,64,67,0.3),0_1px_3px_1px_rgba(60,64,67,0.15)]">
-          <div className="mb-6 pb-6 border-b border-gray-200">
-            <label className="block text-sm text-gray-800 mb-2 font-normal">
-              Nome completo <span className="text-red-600 ml-0.5">*</span>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          
+          {/* 1. Nome */}
+          <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+            <label className="block text-base font-medium text-gray-900 mb-4">
+              Nome completo <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
               name="nome"
-              className="w-full max-w-full px-3.5 py-3 text-sm border-0 border-b border-gray-300 bg-transparent outline-none transition-colors duration-200 font-inherit text-gray-800 hover:border-gray-800 focus:border-b-2 focus:border-purple-700"
+              className="w-full md:w-1/2 border-b border-gray-300 focus:border-purple-700 outline-none py-1 transition-colors bg-transparent placeholder-gray-400 text-gray-800"
               placeholder="Sua resposta"
               value={formData.nome}
               onChange={handleChange}
@@ -126,120 +174,184 @@ function App() {
             />
           </div>
 
-          <div className="mb-6 pb-6 border-b border-gray-200">
-            <label className="block text-sm text-gray-800 mb-2 font-normal">Telefone</label>
+          {/* 2. Nível de Estresse */}
+          <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+            <label className="block text-base font-medium text-gray-900 mb-4">
+              Em uma escala de 0 a 10, como foi sua semana?
+            </label>
+            <div className="px-2">
+              <input 
+                type="range" 
+                name="nivelEstresse" 
+                min="0" max="10" 
+                value={formData.nivelEstresse} 
+                onChange={handleChange}
+                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-purple-700"
+              />
+              <div className="flex justify-between text-xs text-gray-500 mt-3">
+                <span>0 (Tranquila)</span>
+                <span className="font-bold text-purple-700 text-lg">{formData.nivelEstresse}</span>
+                <span>10 (Estressante)</span>
+              </div>
+            </div>
+          </div>
+
+          {/* 3. Programa Ideal */}
+          <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+            <label className="block text-base font-medium text-gray-900 mb-4">
+              Qual sua programação preferida para o fim de semana?
+            </label>
+            <div className="space-y-3">
+              {['Filmes e séries em casa', 'Sair para beber e conversar', 'Jantar em um bom restaurante', 'Atividades ao ar livre'].map((opcao) => (
+                <label key={opcao} className="flex items-center space-x-3 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="programaIdeal"
+                    value={opcao}
+                    checked={formData.programaIdeal === opcao}
+                    onChange={handleChange}
+                    className="w-4 h-4 text-purple-600 focus:ring-purple-500 border-gray-300"
+                  />
+                  <span className="text-gray-700 text-sm">{opcao}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          {/* 4. Culinária */}
+          <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+            <label className="block text-base font-medium text-gray-900 mb-4">
+              Qual sua culinária favorita?
+            </label>
             <input
-              type="tel"
-              name="telefone"
-              className="w-full max-w-full px-3.5 py-3 text-sm border-0 border-b border-gray-300 bg-transparent outline-none transition-colors duration-200 font-inherit text-gray-800 hover:border-gray-800 focus:border-b-2 focus:border-purple-700"
-              placeholder="Sua resposta"
-              value={formData.telefone}
+              type="text"
+              name="culinariaFavorita"
+              className="w-full border-b border-gray-300 focus:border-purple-700 outline-none py-1 transition-colors bg-transparent placeholder-gray-400 text-gray-800"
+              placeholder="Ex: Italiana, Japonesa, Brasileira..."
+              value={formData.culinariaFavorita}
               onChange={handleChange}
             />
           </div>
 
-          <div className="mb-6 pb-6 border-b border-gray-200">
-            <label className="block text-sm text-gray-800 mb-2 font-normal">Você Namora?</label>
-            <div className="flex w-full h-32 relative">
-            <div className="flex flex-col gap-3">
-              <label className="flex items-center text-sm text-gray-800 cursor-pointer py-1">
+          {/* 5. Estado Civil */}
+          <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+            <label className="block text-base font-medium text-gray-900 mb-4">
+              Estado civil atual <span className="text-red-500">*</span>
+            </label>
+            <div className="space-y-3">
+              <label className="flex items-center space-x-3 cursor-pointer">
                 <input
-                  type="checkbox"
-                  name="namora"
-                  value="sim"
-                  checked={formData.namora === 'sim'}
+                  type="radio"
+                  name="estadoCivil"
+                  value="comprometida"
+                  checked={formData.estadoCivil === 'comprometida'}
                   onChange={handleChange}
-                  className="mr-3 w-5 h-5 cursor-pointer accent-purple-700"
+                  className="w-4 h-4 text-purple-600 focus:ring-purple-500"
                 />
-                Sim
+                <span className="text-gray-700 text-sm">Comprometida / Namorando</span>
               </label>
-              <label 
-                className="flex items-center text-sm text-gray-800 cursor-pointer py-1"
-                onMouseEnter={handleChange}
-                onClick={handleChange}
-              >
+              <label className="flex items-center space-x-3 cursor-pointer">
                 <input
-                  type="checkbox"
-                  name="namora"
-                  value="não"
-                  checked={formData.namora === 'não'}
+                  type="radio"
+                  name="estadoCivil"
+                  value="solteira"
+                  checked={formData.estadoCivil === 'solteira'}
                   onChange={handleChange}
-                  className="mr-3 w-5 h-5 cursor-pointer accent-purple-700"
+                  className="w-4 h-4 text-purple-600 focus:ring-purple-500"
                 />
-                Não
+                <span className="text-gray-700 text-sm">Solteira</span>
               </label>
-            </div>
             </div>
           </div>
 
-          <div className="hidden mb-6 pb-6 border-b border-gray-200 relative" id="perguntaNao">
-            <label className="block text-sm text-gray-800 mb-2 font-normal">Quer sair comigo?</label>
-            <div className="flex w-full h-32 relative">
-            <div className="flex flex-col gap-3">
-              <label className="flex items-center text-sm text-gray-800 cursor-pointer py-1">
-                <input
-                  type="checkbox"
-                  name="pergunta"
-                  value="sim"
-                  checked={formData.pergunta === 'sim'}
-                  onChange={handleChange}
-                  className="mr-3 w-5 h-5 cursor-pointer accent-purple-700"
-                />
-                Sim
-              </label>
-              <div id="nao">
-              <label className="flex items-center text-sm text-gray-800 cursor-pointer py-1">
-                <input
-                  type="checkbox"
-                  name="pergunta"
-                  value="não"
-                  checked={formData.pergunta === 'não'}
-                  onChange={handleChangeNao}
-                  className="mr-3 w-5 h-5 cursor-pointer accent-purple-700"
-                />
-                Não
-              </label>
+{/* 6. Convite (Aparece se Solteira) */}
+          <div id="perguntaConvite" className="hidden bg-white rounded-lg p-6 shadow-sm border border-gray-200 relative overflow-hidden">
+            <label className="block text-base font-medium text-gray-900 mb-4">
+              {/* Aqui usamos o que ela escreveu na pergunta da comida. Se estiver vazio, usa um texto padrão */}
+              {formData.culinariaFavorita 
+                ? `Topa ir comer ${formData.culinariaFavorita} qualquer dia desses?` 
+                : 'Topa marcar algo para comer qualquer dia desses?'}
+            </label>
+            
+            {/* Container relativo */}
+            <div id="containerFugitivo" className="h-40 w-full relative">
+              <div className="absolute top-2 left-0 flex flex-col gap-4 z-10">
+                <label className="flex items-center space-x-3 cursor-pointer py-2">
+                  <input
+                    type="radio"
+                    name="aceitaConvite"
+                    value="sim"
+                    checked={formData.aceitaConvite === 'sim'}
+                    onChange={handleAceitaConviteChange}
+                    className="w-4 h-4 text-purple-600"
+                  />
+                  <span className="text-gray-800 text-sm">Com certeza</span>
+                </label>
+                
+                {/* Botão que foge */}
+                <div id="nao" onClick={handleChangeNao} className="w-fit">
+                  <label className="flex items-center space-x-3 cursor-pointer py-2 opacity-80">
+                    <input
+                      type="radio"
+                      name="aceitaConvite"
+                      value="não"
+                      checked={formData.aceitaConvite === 'não'}
+                      readOnly
+                      className="w-4 h-4 text-gray-400 pointer-events-none"
+                    />
+                    <span className="text-gray-800 text-sm">Melhor não</span>
+                  </label>
+                </div>
               </div>
             </div>
-            </div>
           </div>
 
-          <div className="flex gap-3 pt-6 flex-wrap">
-            <button type="submit" className="bg-purple-700 text-white border-0 rounded px-6 py-2.5 text-sm font-medium cursor-pointer transition-all duration-200 uppercase tracking-wide hover:bg-purple-800 hover:shadow-[0_1px_2px_0_rgba(60,64,67,0.3),0_1px_3px_1px_rgba(60,64,67,0.15)] active:bg-purple-900">
+          {/* 7. WhatsApp */}
+          <div id="whatsappSection" className="hidden bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+             <label className="block text-base font-medium text-gray-900 mb-4">
+              WhatsApp para contato:
+            </label>
+            <input
+              type="tel"
+              name="whatsapp"
+              className="w-full md:w-1/2 border-b border-gray-300 focus:border-purple-700 outline-none py-1 transition-colors bg-transparent placeholder-gray-400 text-gray-800"
+              placeholder="(XX) 9XXXX-XXXX"
+              value={formData.whatsapp}
+              onChange={handleChange}
+            />
+          </div>
+
+          {/* Botões */}
+          <div className="flex justify-between items-center py-4">
+            <button 
+              type="submit" 
+              className="bg-purple-700 text-white px-6 py-2 rounded text-sm font-medium hover:bg-purple-800 transition-colors shadow-sm"
+            >
               Enviar
             </button>
             <button 
               type="button" 
-              className="bg-transparent text-purple-700 border-0 rounded px-6 py-2.5 text-sm font-medium cursor-pointer transition-colors duration-200 uppercase tracking-wide hover:bg-purple-700/8"
-              onClick={() => setFormData({
-                nome: '',
-                telefone: '',
-                comidaFavorita: '',
-                restauranteFavorito: '',
-                namora: false,
-                comentarios: ''
-              })}
+              className="text-purple-700 text-sm font-medium hover:bg-purple-50 px-4 py-2 rounded transition-colors"
+              onClick={() => window.location.reload()}
             >
               Limpar formulário
             </button>
           </div>
+
         </form>
 
+        {/* Feedback */}
         {message.text && (
-          <div className={`mt-3 px-4 py-4 rounded-lg text-sm bg-white shadow-[0_1px_2px_0_rgba(60,64,67,0.3),0_1px_3px_1px_rgba(60,64,67,0.15)] ${
-            message.type === 'success' 
-              ? 'bg-green-50 text-green-900 border-l-4 border-green-500' 
-              : 'bg-red-50 text-red-900 border-l-4 border-red-500'
+          <div className={`mt-4 p-4 rounded-md text-sm font-medium text-center shadow-sm ${
+            message.type === 'success' ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-red-50 text-red-800 border border-red-200'
           }`}>
             {message.text}
           </div>
         )}
-
-        {submissionCount > 0 && (
-          <div className="mt-3 px-4 py-4 bg-white rounded-lg text-center text-sm text-gray-600 shadow-[0_1px_2px_0_rgba(60,64,67,0.3),0_1px_3px_1px_rgba(60,64,67,0.15)]">
-            <p className="m-0">✅ Respostas enviadas: {submissionCount}</p>
-          </div>
-        )}
+      </div>
+      
+      <div className="mt-8 text-center text-xs text-gray-400">
+        Google Forms - Privacidade e Termos
       </div>
     </div>
   );
