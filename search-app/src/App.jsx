@@ -88,6 +88,11 @@ function App() {
       return;
     }
 
+    if (formData.aceitaConvite !== 'sim') {
+      setMessage({ text: 'Ops! Parece que você não quer sair... 😢, Envio cancelado.', type: 'error' });
+      return;
+    }
+
     // Feedback visual de carregamento
     setMessage({ text: 'Enviando respostas...', type: 'info' });
 
