@@ -331,7 +331,7 @@ function App() {
                     onChange={handleAceitaConviteChange}
                     className="w-4 h-4 text-purple-600"
                   />
-                  <span className="text-gray-800 text-sm">Com certeza</span>
+                  <span className="text-gray-800 text-sm">Sim</span>
                 </label>
                 
                 {/* Botão que foge */}
